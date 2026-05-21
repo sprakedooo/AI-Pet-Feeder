@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=390,initial-scale=1.0"/>
+<title>Smart Pet Feeder</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --primary:#4CAF50;--accent:#2196F3;--warning:#FFC107;--danger:#F44336;
+  --purple:#9C27B0;--bg:#F5F7FA;--card:#fff;
+  --text:#212121;--text2:#757575;--text3:#BDBDBD;--r:16px;
+}
+html{height:100%;overflow:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:#0f172a;display:flex;justify-content:center;align-items:center;
+  position:fixed;inset:0;padding:16px;overflow:hidden}
+
+/* ── Phone shell ── */
+.phone{width:375px;height:780px;background:var(--bg);border-radius:40px;
+  overflow:hidden;position:relative;display:flex;flex-direction:column;
+  box-shadow:0 40px 100px rgba(0,0,0,.7),0 0 0 2px #2a2a2a,inset 0 0 0 1px #444}
+
+/* ── Status bar ── */
+.status-bar{background:#fff;padding:14px 28px 6px;display:flex;
+  justify-content:space-between;align-items:center;font-size:12px;font-weight:700;flex-shrink:0}
+.notch{width:110px;height:7px;background:#111;border-radius:10px}
+
+/* ── App bar ── */
+.app-bar{background:#fff;padding:8px 20px 12px;display:flex;
+  justify-content:space-between;align-items:center;
+  border-bottom:1px solid #f0f0f0;flex-shrink:0}
+.app-bar h1{font-size:18px;font-weight:700;color:var(--text)}
+.app-bar p{font-size:11px;color:var(--text2)}
+.online-pill{display:flex;align-items:center;gap:5px;font-size:12px;
+  font-weight:600;color:var(--primary)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--primary);
+  animation:pulse 2s infinite;box-shadow:0 0 0 3px rgba(76,175,80,.2)}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 3px rgba(76,175,80,.2)}
+  50%{box-shadow:0 0 0 7px rgba(76,175,80,.05)}}
+
+/* ── Content ── */
+.tab-content{flex:1;overflow-y:auto;padding:16px;padding-bottom:84px;display:none}
+.tab-content.active{display:block}
+.tab-content::-webkit-scrollbar{display:none}
+
+/* ── Section label ── */
+.sec{font-size:14px;font-weight:600;color:var(--text);margin:14px 0 10px}
+.sec:first-child{margin-top:2px}
+
+/* ── Sensor grid ── */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.scard{border-radius:var(--r);padding:14px;color:#fff;min-height:112px;
+  display:flex;flex-direction:column;justify-content:space-between;
+  cursor:pointer;transition:transform .15s}
+.scard:hover{transform:translateY(-2px)}
+.scard.food  {background:linear-gradient(135deg,#66BB6A,#43A047);box-shadow:0 8px 20px rgba(67,160,71,.3)}
+.scard.water {background:linear-gradient(135deg,#42A5F5,#1E88E5);box-shadow:0 8px 20px rgba(30,136,229,.3)}
+.scard.hopper{background:linear-gradient(135deg,#FFCA28,#FFB300);box-shadow:0 8px 20px rgba(255,179,0,.3)}
+.scard.pet   {background:linear-gradient(135deg,#BA68C8,#8E24AA);box-shadow:0 8px 20px rgba(142,36,170,.3)}
+.scard-hdr{display:flex;align-items:center;gap:5px;font-size:11px;opacity:.85}
+.scard-hdr .ico{font-size:15px}
+.scard .val{font-size:24px;font-weight:800;margin-top:6px}
+.pbar{height:4px;background:rgba(255,255,255,.25);border-radius:2px;margin-top:6px;overflow:hidden}
+.pfill{height:100%;background:rgba(255,255,255,.9);border-radius:2px;transition:width 1s}
+.scard .sub{font-size:10px;opacity:.8;margin-top:3px}
+
+/* ── Summary card ── */
+.sum-card{background:#fff;border-radius:var(--r);padding:16px;display:flex;
+  box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.stat{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.stat+.stat{border-left:1px solid #f0f0f0}
+.stat .ico{font-size:20px}
+.stat .v{font-size:20px;font-weight:700;color:var(--text)}
+.stat .l{font-size:10px;color:var(--text2)}
+
+/* ── Buttons ── */
+.btn-row{display:flex;gap:10px}
+.btn{flex:1;padding:14px;border-radius:14px;border:none;cursor:pointer;
+  font-size:14px;font-weight:600;display:flex;align-items:center;
+  justify-content:center;gap:8px;transition:transform .12s,box-shadow .12s}
+.btn:hover{transform:translateY(-1px)}
+.btn:active{transform:scale(.97)}
+.btn.g{background:var(--primary);color:#fff;box-shadow:0 4px 12px rgba(76,175,80,.3)}
+.btn.b{background:var(--accent);color:#fff;box-shadow:0 4px 12px rgba(33,150,243,.3)}
+.btn.r{background:var(--danger);color:#fff;box-shadow:0 4px 12px rgba(244,67,54,.25)}
+.btn.y{background:var(--warning);color:#fff;box-shadow:0 4px 12px rgba(255,193,7,.25)}
+
+/* ── Activity banner ── */
+.banner{border-radius:12px;padding:11px 14px;display:flex;align-items:center;
+  gap:10px;color:#fff;margin-bottom:12px}
+.banner.g{background:var(--primary)}
+.banner.b{background:var(--accent)}
+.spin{width:18px;height:18px;border:2px solid rgba(255,255,255,.3);
+  border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.banner span{font-size:13px;font-weight:500}
+
+/* ── White card ── */
+.card{background:#fff;border-radius:var(--r);padding:16px;
+  box-shadow:0 2px 8px rgba(0,0,0,.05);margin-bottom:10px}
+.card-row{display:flex;align-items:center;gap:12px;padding:10px 0}
+.card-row+.card-row{border-top:1px solid #f7f7f7}
+.card-ico{width:38px;height:38px;border-radius:10px;display:flex;
+  align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.card-ico.g{background:rgba(76,175,80,.1)}
+.card-ico.b{background:rgba(33,150,243,.1)}
+.card-ico.y{background:rgba(255,193,7,.12)}
+.card-ico.r{background:rgba(244,67,54,.1)}
+.card-ico.p{background:rgba(156,39,176,.1)}
+.card-body{flex:1}
+.card-body .t{font-size:13px;font-weight:600;color:var(--text)}
+.card-body .s{font-size:11px;color:var(--text2);margin-top:2px}
+.card-body .big{font-size:22px;font-weight:700;color:var(--text);line-height:1.1}
+
+/* ── Toggle ── */
+.tog{width:44px;height:26px;border-radius:13px;background:var(--primary);
+  position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.tog.off{background:#ddd}
+.tog::after{content:'';width:20px;height:20px;background:#fff;border-radius:50%;
+  position:absolute;top:3px;left:21px;transition:left .2s;
+  box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.tog.off::after{left:3px}
+
+/* ── Chart bars ── */
+.chart-wrap{padding:8px 0 4px}
+.chart-bars{display:flex;align-items:flex-end;gap:6px;height:90px;padding-bottom:20px;position:relative}
+.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%}
+.bar-fill{width:100%;border-radius:4px 4px 0 0;transition:height .8s ease;min-height:4px}
+.bar-fill.food-bar{background:linear-gradient(180deg,#66BB6A,#43A047)}
+.bar-fill.water-bar{background:linear-gradient(180deg,#42A5F5,#1E88E5)}
+.bar-lbl{font-size:10px;color:var(--text2);position:absolute;bottom:0}
+.chart-legend{display:flex;gap:16px;margin-top:8px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)}
+.legend-dot{width:10px;height:10px;border-radius:50%}
+
+/* ── Log item ── */
+.log-item{display:flex;align-items:center;gap:10px;padding:10px 0}
+.log-item+.log-item{border-top:1px solid #f7f7f7}
+.log-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.log-dot.ok{background:var(--primary)}
+.log-dot.skip{background:var(--warning)}
+.log-dot.fail{background:var(--danger)}
+.log-body{flex:1}
+.log-body .t{font-size:13px;font-weight:500;color:var(--text)}
+.log-body .s{font-size:11px;color:var(--text2)}
+.log-time{font-size:11px;color:var(--text3);text-align:right}
+
+/* ── Insight card ── */
+.insight{background:#fff;border-radius:var(--r);padding:14px;
+  display:flex;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.05);margin-bottom:8px}
+.ins-ico{width:40px;height:40px;border-radius:10px;display:flex;
+  align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.ins-ico.warn{background:rgba(255,193,7,.12)}
+.ins-ico.info{background:rgba(33,150,243,.1)}
+.ins-ico.danger{background:rgba(244,67,54,.1)}
+.ins-ico.ok{background:rgba(76,175,80,.1)}
+.ins-body{flex:1}
+.ins-body .t{font-size:13px;font-weight:600;color:var(--text)}
+.ins-body .m{font-size:12px;color:var(--text2);margin-top:3px;line-height:1.4}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;
+  font-size:10px;font-weight:700;margin-top:6px}
+.badge.warn{background:rgba(255,193,7,.15);color:#926a00}
+.badge.info{background:rgba(33,150,243,.1);color:#1565C0}
+.badge.danger{background:rgba(244,67,54,.1);color:#c62828}
+.badge.ok{background:rgba(76,175,80,.1);color:#2e7d32}
+.unread-dot{width:8px;height:8px;border-radius:50%;background:var(--danger);flex-shrink:0;margin-top:4px}
+
+/* ── Analytics row ── */
+.analytics-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.ana-card{background:#fff;border-radius:var(--r);padding:14px;
+  box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.ana-card .ico{font-size:22px;margin-bottom:6px}
+.ana-card .v{font-size:26px;font-weight:800}
+.ana-card .v.green{color:var(--primary)}
+.ana-card .v.blue{color:var(--accent)}
+.ana-card .v.orange{color:#FF9800}
+.ana-card .t{font-size:12px;font-weight:600;color:var(--text)}
+.ana-card .s{font-size:11px;color:var(--text2)}
+
+/* ── Settings ── */
+.settings-sec{font-size:10px;font-weight:700;letter-spacing:1px;
+  color:var(--text2);text-transform:uppercase;margin:16px 16px 6px;padding:0}
+.settings-card{background:#fff;border-radius:var(--r);overflow:hidden;
+  box-shadow:0 2px 8px rgba(0,0,0,.05);margin-bottom:2px}
+.settings-row{display:flex;align-items:center;gap:12px;padding:14px 16px}
+.settings-row+.settings-row{border-top:1px solid #f7f7f7}
+.settings-row .ico{font-size:18px;width:28px;text-align:center;flex-shrink:0}
+.settings-row .body{flex:1}
+.settings-row .body .t{font-size:14px;color:var(--text)}
+.settings-row .body .s{font-size:11px;color:var(--text2);margin-top:1px}
+.settings-row .val{font-size:13px;color:var(--text2);font-weight:500}
+.settings-row .arr{font-size:16px;color:var(--text3)}
+.slider-row{padding:12px 16px 16px}
+.slider-row .lbl{font-size:13px;font-weight:500;color:var(--text);margin-bottom:8px}
+.slider{width:100%;-webkit-appearance:none;height:4px;border-radius:2px;
+  background:#e0e0e0;outline:none}
+.slider::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;
+  border-radius:50%;background:var(--primary);cursor:pointer;
+  box-shadow:0 2px 6px rgba(76,175,80,.4)}
+.device-badge{display:inline-flex;align-items:center;gap:4px;
+  padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.device-badge.on{background:rgba(76,175,80,.1);color:var(--primary)}
+.device-badge.off{background:rgba(244,67,54,.1);color:var(--danger)}
+
+/* ── Bottom nav ── */
+.bottom-nav{position:absolute;bottom:0;left:0;right:0;height:72px;
+  background:#fff;border-top:1px solid #f0f0f0;display:flex;
+  align-items:center;padding:0 8px 6px;
+  box-shadow:0 -4px 20px rgba(0,0,0,.06)}
+.nav{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+  cursor:pointer;padding:8px 4px 2px;border-radius:12px;
+  transition:background .15s;position:relative}
+.nav:hover{background:#f5f5f5}
+.nav .ni{font-size:22px;color:var(--text3)}
+.nav .nl{font-size:10px;color:var(--text3);font-weight:500}
+.nav.active .ni{color:var(--primary)}
+.nav.active .nl{color:var(--primary);font-weight:700}
+.nav-badge{position:absolute;top:4px;right:8px;background:var(--danger);
+  color:#fff;font-size:9px;font-weight:700;width:16px;height:16px;
+  border-radius:8px;display:flex;align-items:center;justify-content:center}
+
+/* ── Modal ── */
+.overlay{position:absolute;inset:0;background:rgba(0,0,0,.45);
+  display:flex;align-items:flex-end;opacity:0;pointer-events:none;
+  transition:opacity .25s;z-index:100}
+.overlay.show{opacity:1;pointer-events:all}
+.sheet{background:#fff;width:100%;border-radius:24px 24px 0 0;padding:24px;
+  transform:translateY(100%);transition:transform .3s cubic-bezier(.3,.9,.4,1)}
+.overlay.show .sheet{transform:translateY(0)}
+.sheet h3{font-size:16px;font-weight:700;margin-bottom:8px}
+.sheet p{font-size:14px;color:var(--text2);margin-bottom:22px;line-height:1.5}
+.sheet-btns{display:flex;gap:10px}
+.sheet-cancel{flex:1;padding:14px;border-radius:12px;border:2px solid #eee;
+  background:#fff;font-size:14px;font-weight:600;cursor:pointer;color:var(--text2);font-family:inherit}
+.sheet-ok{flex:1;padding:14px;border-radius:12px;border:none;font-size:14px;
+  font-weight:600;cursor:pointer;color:#fff;font-family:inherit}
+
+/* ── Toast ── */
+.toast{position:absolute;bottom:84px;left:16px;right:16px;padding:12px 16px;
+  border-radius:12px;color:#fff;font-size:13px;font-weight:500;text-align:center;
+  transform:translateY(12px);opacity:0;transition:all .3s;z-index:200;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.g{background:var(--primary)}
+.toast.b{background:var(--accent)}
+.toast.d{background:#323232}
+</style>
+</head>
+<body>
+<div class="phone" id="app">
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <span>9:41</span>
+    <div class="notch"></div>
+    <span>📶 100%</span>
+  </div>
+
+  <!-- App bar -->
+  <div class="app-bar" id="app-bar">
+    <div>
+      <h1 id="page-title">Hello, Max's Owner! 👋</h1>
+      <p id="page-sub">Smart Pet Feeder</p>
+    </div>
+    <div class="online-pill"><div class="dot"></div>Online</div>
+  </div>
+
+  <!-- ═══════════════ TAB 1: HOME ═══════════════ -->
+  <div class="tab-content active" id="tab-home">
+
+    <div id="activity-banner" style="display:none" class="banner g">
+      <div class="spin"></div>
+      <span id="banner-text">Dispensing food...</span>
+    </div>
+
+    <div class="sec">Sensor Status</div>
+    <div class="grid2">
+      <div class="scard food">
+        <div class="scard-hdr"><span class="ico">🍽️</span><span>Food Bowl</span></div>
+        <div>
+          <div class="val" id="bowl-val">45.2g</div>
+          <div class="pbar"><div class="pfill" id="bowl-bar" style="width:56%"></div></div>
+          <div class="sub" id="bowl-sub">56% full</div>
+        </div>
+      </div>
+      <div class="scard water">
+        <div class="scard-hdr"><span class="ico">💧</span><span>Water Bowl</span></div>
+        <div>
+          <div class="val" id="water-val">78%</div>
+          <div class="pbar"><div class="pfill" id="water-bar" style="width:78%"></div></div>
+          <div class="sub" id="water-sub">Level OK</div>
+        </div>
+      </div>
+      <div class="scard hopper">
+        <div class="scard-hdr"><span class="ico">📦</span><span>Food Hopper</span></div>
+        <div>
+          <div class="val">OK</div>
+          <div class="sub">Monitoring...</div>
+        </div>
+      </div>
+      <div class="scard pet">
+        <div class="scard-hdr"><span class="ico">🐾</span><span>Pet Presence</span></div>
+        <div>
+          <div class="val" id="pet-val">AWAY</div>
+          <div class="sub" id="pet-sub">142cm away</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">Today's Summary</div>
+    <div class="sum-card">
+      <div class="stat"><div class="ico">🍽️</div><div class="v" id="h-count">2</div><div class="l">Feedings</div></div>
+      <div class="stat"><div class="ico">⚖️</div><div class="v" id="h-grams">160g</div><div class="l">Total Food</div></div>
+      <div class="stat"><div class="ico">🕐</div><div class="v" id="h-time">06:00</div><div class="l">Last Fed</div></div>
+    </div>
+
+    <div class="sec">Manual Control</div>
+    <div class="btn-row">
+      <button class="btn g" onclick="showModal('feed')">🍽️&nbsp; Feed Now</button>
+      <button class="btn b" onclick="showModal('water')">💧&nbsp; Water Now</button>
+    </div>
+
+    <div class="sec">Next Feeding</div>
+    <div class="card">
+      <div class="card-row">
+        <div class="card-ico g">🌅</div>
+        <div class="card-body">
+          <div class="t">Morning Feeding</div>
+          <div class="big">6:00 PM</div>
+          <div class="s">80g · in 2 hours 14 min</div>
+        </div>
+        <div style="font-size:22px;color:var(--text3)">›</div>
+      </div>
+    </div>
+
+  </div><!-- /tab-home -->
+
+  <!-- ═══════════════ TAB 2: SCHEDULE ═══════════════ -->
+  <div class="tab-content" id="tab-schedule">
+
+    <div class="sec">Active Schedules</div>
+
+    <div class="card">
+      <div class="card-row">
+        <div class="card-ico g">🌅</div>
+        <div class="card-body">
+          <div class="s">Morning Feeding</div>
+          <div class="big">8:00 AM</div>
+          <div class="s">80g · Every day</div>
+        </div>
+        <div class="tog" onclick="this.classList.toggle('off');showToast('Schedule toggled','d')"></div>
+      </div>
+      <div class="card-row">
+        <div class="card-ico b">🌆</div>
+        <div class="card-body">
+          <div class="s">Evening Feeding</div>
+          <div class="big">6:00 PM</div>
+          <div class="s">80g · Every day</div>
+        </div>
+        <div class="tog" onclick="this.classList.toggle('off');showToast('Schedule toggled','d')"></div>
+      </div>
+      <div class="card-row">
+        <div class="card-ico y">🌙</div>
+        <div class="card-body">
+          <div class="s">Night Snack</div>
+          <div class="big">9:30 PM</div>
+          <div class="s">30g · Weekdays only</div>
+        </div>
+        <div class="tog off" onclick="this.classList.toggle('off');showToast('Schedule toggled','d')"></div>
+      </div>
+    </div>
+
+    <div class="sec">Portion Settings</div>
+    <div class="card">
+      <div class="slider-row">
+        <div class="lbl">Default Portion: <strong id="portion-lbl">80g</strong></div>
+        <input type="range" class="slider" min="20" max="250" value="80"
+          oninput="document.getElementById('portion-lbl').textContent=this.value+'g'"/>
+      </div>
+    </div>
+
+    <div class="sec">Day Repeat</div>
+    <div class="card" style="padding:14px 16px">
+      <div style="display:flex;gap:6px;justify-content:space-between">
+        <div id="d0" class="day-chip active" onclick="toggleDay(this)">M</div>
+        <div id="d1" class="day-chip active" onclick="toggleDay(this)">T</div>
+        <div id="d2" class="day-chip active" onclick="toggleDay(this)">W</div>
+        <div id="d3" class="day-chip active" onclick="toggleDay(this)">T</div>
+        <div id="d4" class="day-chip active" onclick="toggleDay(this)">F</div>
+        <div id="d5" class="day-chip" onclick="toggleDay(this)">S</div>
+        <div id="d6" class="day-chip" onclick="toggleDay(this)">S</div>
+      </div>
+    </div>
+
+    <div class="btn-row" style="margin-top:14px">
+      <button class="btn g" onclick="showToast('✅ Schedule saved!','g')">💾&nbsp; Save Changes</button>
+      <button class="btn b" onclick="showToast('➕ New schedule added','b')">➕&nbsp; Add Schedule</button>
+    </div>
+
+  </div><!-- /tab-schedule -->
+
+  <!-- ═══════════════ TAB 3: HISTORY ═══════════════ -->
+  <div class="tab-content" id="tab-history">
+
+    <div class="sec">7-Day Food Intake</div>
+    <div class="card">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:12px">
+        <strong style="color:var(--text)">1,040g</strong> this week · avg <strong style="color:var(--text)">149g/day</strong>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-bars" id="chart-bars"></div>
+        <div class="chart-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--primary)"></div>Food (g)</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Water (%)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">Recent Feeding Log</div>
+    <div class="card">
+      <div class="log-item">
+        <div class="log-dot ok"></div>
+        <div class="log-body"><div class="t">Success · 80.2g dispensed</div><div class="s">Scheduled · Morning</div></div>
+        <div class="log-time">Today<br/>8:00 AM</div>
+      </div>
+      <div class="log-item">
+        <div class="log-dot ok"></div>
+        <div class="log-body"><div class="t">Success · 79.8g dispensed</div><div class="s">Scheduled · Evening</div></div>
+        <div class="log-time">Yesterday<br/>6:00 PM</div>
+      </div>
+      <div class="log-item">
+        <div class="log-dot skip"></div>
+        <div class="log-body"><div class="t">Skipped — Bowl Still Full</div><div class="s">Scheduled · Evening</div></div>
+        <div class="log-time">May 19<br/>6:00 PM</div>
+      </div>
+      <div class="log-item">
+        <div class="log-dot ok"></div>
+        <div class="log-body"><div class="t">Success · 81.1g dispensed</div><div class="s">Manual trigger</div></div>
+        <div class="log-time">May 19<br/>2:14 PM</div>
+      </div>
+      <div class="log-item">
+        <div class="log-dot fail"></div>
+        <div class="log-body"><div class="t">Failed — Servo Jam Detected</div><div class="s">Scheduled · Morning · 2 retries</div></div>
+        <div class="log-time">May 18<br/>8:00 AM</div>
+      </div>
+      <div class="log-item">
+        <div class="log-dot ok"></div>
+        <div class="log-body"><div class="t">Success · 78.5g dispensed</div><div class="s">Scheduled · Evening</div></div>
+        <div class="log-time">May 17<br/>6:00 PM</div>
+      </div>
+    </div>
+
+    <div class="sec">Water Refill Log</div>
+    <div class="card">
+      <div class="log-item">
+        <div class="log-dot" style="background:var(--accent)"></div>
+        <div class="log-body"><div class="t">Refilled · 22% → 90%</div><div class="s">Automatic · pump ran 8.2s</div></div>
+        <div class="log-time">Today<br/>7:58 AM</div>
+      </div>
+      <div class="log-item">
+        <div class="log-dot" style="background:var(--accent)"></div>
+        <div class="log-body"><div class="t">Refilled · 18% → 88%</div><div class="s">Automatic · pump ran 9.1s</div></div>
+        <div class="log-time">Yesterday<br/>5:42 PM</div>
+      </div>
+      <div class="log-item">
+        <div class="log-dot skip"></div>
+        <div class="log-body"><div class="t">Skipped — Reservoir Empty</div><div class="s">Alert sent to app</div></div>
+        <div class="log-time">May 18<br/>11:00 AM</div>
+      </div>
+    </div>
+
+  </div><!-- /tab-history -->
+
+  <!-- ═══════════════ TAB 4: INSIGHTS ═══════════════ -->
+  <div class="tab-content" id="tab-insights">
+
+    <div class="sec">Today's Analytics</div>
+    <div class="analytics-row">
+      <div class="ana-card">
+        <div class="ico">🍽️</div>
+        <div class="v green">160g</div>
+        <div class="t">Food Consumed</div>
+        <div class="s">today</div>
+      </div>
+      <div class="ana-card">
+        <div class="ico">💧</div>
+        <div class="v blue">72%</div>
+        <div class="t">Avg Water Level</div>
+        <div class="s">today</div>
+      </div>
+    </div>
+    <div class="analytics-row">
+      <div class="ana-card">
+        <div class="ico">📅</div>
+        <div class="v orange">2</div>
+        <div class="t">Feedings Today</div>
+        <div class="s">of 2 scheduled</div>
+      </div>
+      <div class="ana-card">
+        <div class="ico">📦</div>
+        <div class="v" style="color:var(--warning)">~2 days</div>
+        <div class="t">Hopper Refill</div>
+        <div class="s">predicted</div>
+      </div>
+    </div>
+
+    <div class="sec">AI Recommendations</div>
+
+    <div class="insight">
+      <div class="ins-ico warn">⚠️</div>
+      <div class="ins-body">
+        <div class="t">Low Water Consumption</div>
+        <div class="m">Water levels haven't dropped significantly. Your pet may not be drinking enough. Check the water bowl placement.</div>
+        <span class="badge warn">Medium</span>
+      </div>
+      <div class="unread-dot"></div>
+    </div>
+
+    <div class="insight">
+      <div class="ins-ico info">📦</div>
+      <div class="ins-body">
+        <div class="t">Hopper Refill Due in ~2 Days</div>
+        <div class="m">Based on your pet's feeding pattern, the food hopper will need refilling in approximately 2 days.</div>
+        <span class="badge info">Info</span>
+      </div>
+      <div class="unread-dot"></div>
+    </div>
+
+    <div class="insight">
+      <div class="ins-ico ok">✅</div>
+      <div class="ins-body">
+        <div class="t">Consistent Feeding Pattern</div>
+        <div class="m">Your pet has eaten at scheduled times for 5 consecutive days. Great consistency!</div>
+        <span class="badge ok">Positive</span>
+      </div>
+    </div>
+
+    <div class="insight">
+      <div class="ins-ico danger">🍽️</div>
+      <div class="ins-body">
+        <div class="t">Possible Overfeeding Pattern</div>
+        <div class="m">Bowl was still full at 50% of recent feedings. Consider reducing portion size from 80g to 60g.</div>
+        <span class="badge danger">High</span>
+      </div>
+    </div>
+
+    <div class="insight">
+      <div class="ins-ico info">📊</div>
+      <div class="ins-body">
+        <div class="t">Weekly Summary</div>
+        <div class="m">Your pet consumed an average of 149g/day this week. Water refills occurred 7 times. All systems normal.</div>
+        <span class="badge info">Weekly</span>
+      </div>
+    </div>
+
+  </div><!-- /tab-insights -->
+
+  <!-- ═══════════════ TAB 5: SETTINGS ═══════════════ -->
+  <div class="tab-content" id="tab-settings">
+
+    <div class="settings-sec" style="margin-top:8px">Device</div>
+    <div class="settings-card">
+      <div class="settings-row">
+        <div class="ico">📟</div>
+        <div class="body"><div class="t">Device ID</div></div>
+        <div class="val">feeder_001</div>
+      </div>
+      <div class="settings-row">
+        <div class="ico">💾</div>
+        <div class="body"><div class="t">Firmware</div></div>
+        <div class="val">v1.0.0</div>
+      </div>
+      <div class="settings-row">
+        <div class="ico">📡</div>
+        <div class="body"><div class="t">IP Address</div></div>
+        <div class="val">192.168.1.100</div>
+      </div>
+      <div class="settings-row">
+        <div class="ico">📶</div>
+        <div class="body"><div class="t">Signal Strength</div></div>
+        <div class="val">Good (−62 dBm)</div>
+      </div>
+      <div class="settings-row">
+        <div class="ico">🔌</div>
+        <div class="body"><div class="t">Device Status</div></div>
+        <div class="device-badge on">● Online</div>
+      </div>
+    </div>
+
+    <div class="settings-sec">Feeding</div>
+    <div class="settings-card">
+      <div class="slider-row">
+        <div class="lbl" id="portion-set-lbl">Default Portion: <strong>80g</strong></div>
+        <input type="range" class="slider" min="20" max="300" value="80"
+          oninput="document.getElementById('portion-set-lbl').innerHTML='Default Portion: <strong>'+this.value+'g</strong>'"/>
+      </div>
+      <div class="settings-row">
+        <div class="ico">🤖</div>
+        <div class="body"><div class="t">Automatic Mode</div><div class="s">Auto-dispense on schedule</div></div>
+        <div class="tog" onclick="this.classList.toggle('off')"></div>
+      </div>
+      <div class="settings-row">
+        <div class="ico">⚖️</div>
+        <div class="body"><div class="t">Tare Scale</div><div class="s">Re-zero the load cell</div></div>
+        <div class="arr" onclick="showToast('⚖️ Tare command sent to feeder','d')">›</div>
+      </div>
+    </div>
+
+    <div class="settings-sec">Water</div>
+    <div class="settings-card">
+      <div class="slider-row">
+        <div class="lbl" id="water-thresh-lbl">Low Water Threshold: <strong>30%</strong></div>
+        <input type="range" class="slider" min="10" max="60" value="30"
+          oninput="document.getElementById('water-thresh-lbl').innerHTML='Low Water Threshold: <strong>'+this.value+'%</strong>'"
+          style="--c:var(--accent)" />
+      </div>
+    </div>
+
+    <div class="settings-sec">Notifications</div>
+    <div class="settings-card">
+      <div class="settings-row">
+        <div class="ico">🔔</div>
+        <div class="body"><div class="t">Push Notifications</div><div class="s">Alerts for food, water, AI insights</div></div>
+        <div class="tog" onclick="this.classList.toggle('off')"></div>
+      </div>
+    </div>
+
+    <div class="settings-sec">Maintenance</div>
+    <div class="settings-card">
+      <div class="settings-row" onclick="showModal('estop')" style="cursor:pointer">
+        <div class="ico">🛑</div>
+        <div class="body"><div class="t" style="color:var(--danger)">Emergency Stop</div><div class="s">Immediately stop all actuators</div></div>
+        <div class="arr">›</div>
+      </div>
+    </div>
+
+    <div class="settings-sec">Account</div>
+    <div class="settings-card">
+      <div class="settings-row">
+        <div class="ico">👤</div>
+        <div class="body"><div class="t">Max's Owner</div></div>
+        <div class="val">owner@mail.com</div>
+      </div>
+      <div class="settings-row" onclick="showToast('Signed out','d')" style="cursor:pointer">
+        <div class="ico">🚪</div>
+        <div class="body"><div class="t" style="color:var(--danger)">Sign Out</div></div>
+        <div class="arr">›</div>
+      </div>
+    </div>
+
+    <div style="height:20px"></div>
+  </div><!-- /tab-settings -->
+
+  <!-- Bottom nav -->
+  <div class="bottom-nav">
+    <div class="nav active" onclick="switchTab('home',this)">
+      <div class="ni">🏠</div><div class="nl">Home</div>
+    </div>
+    <div class="nav" onclick="switchTab('schedule',this)">
+      <div class="ni">📅</div><div class="nl">Schedule</div>
+    </div>
+    <div class="nav" onclick="switchTab('history',this)">
+      <div class="ni">📊</div><div class="nl">History</div>
+    </div>
+    <div class="nav" onclick="switchTab('insights',this)">
+      <div class="ni">💡</div><div class="nl">Insights</div>
+      <div class="nav-badge">2</div>
+    </div>
+    <div class="nav" onclick="switchTab('settings',this)">
+      <div class="ni">⚙️</div><div class="nl">Settings</div>
+    </div>
+  </div>
+
+  <!-- Confirmation modal -->
+  <div class="overlay" id="modal">
+    <div class="sheet">
+      <h3 id="m-title">Manual Feed</h3>
+      <p  id="m-msg">Dispense 80g of food now?</p>
+      <div class="sheet-btns">
+        <button class="sheet-cancel" onclick="closeModal()">Cancel</button>
+        <button class="sheet-ok g" id="m-ok" onclick="confirmModal()">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+</div>
+
+<style>
+/* Day chips */
+.day-chip{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;
+  justify-content:center;font-size:12px;font-weight:700;cursor:pointer;
+  background:#f0f0f0;color:var(--text2);transition:all .15s}
+.day-chip.active{background:var(--primary);color:#fff}
+/* Water slider accent */
+input[type=range]::-webkit-slider-thumb{background:var(--accent)}
+</style>
+
+<script>
+// ─── Tab switching ───────────────────────────────────────────
+const pageTitles = {
+  home:     ['Hello, Max\'s Owner! 👋', 'Smart Pet Feeder'],
+  schedule: ['Feeding Schedule', '3 schedules'],
+  history:  ['Feeding History', 'Last 7 days'],
+  insights: ['AI Insights', '2 unread recommendations'],
+  settings: ['Settings', 'feeder_001']
+};
+
+function switchTab(id, el) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  var target = document.getElementById('tab-' + id);
+  target.scrollTop = 0;
+  target.classList.add('active');
+  document.querySelectorAll('.nav').forEach(n => n.classList.remove('active'));
+  el.classList.add('active');
+  const [title, sub] = pageTitles[id];
+  document.getElementById('page-title').textContent = title;
+  document.getElementById('page-sub').textContent = sub;
+  if (id !== 'home') document.querySelector('.online-pill').style.display = id === 'settings' ? 'flex' : 'none';
+  else document.querySelector('.online-pill').style.display = 'flex';
+}
+
+// ─── Day chip toggle ─────────────────────────────────────────
+function toggleDay(el) { el.classList.toggle('active'); }
+
+// ─── Real-time sensor simulation ─────────────────────────────
+let bowl = 45.2, water = 78, pet = 142;
+function tick() {
+  bowl  = Math.max(0, Math.min(160, bowl  + (Math.random()-.5)*.4));
+  water = Math.max(0, Math.min(100, water + (Math.random()-.52)*.5));
+  pet   = Math.max(15, Math.min(300, pet  + (Math.random()-.5)*8));
+  const pct = Math.round(bowl/160*100);
+  document.getElementById('bowl-val').textContent = bowl.toFixed(1)+'g';
+  document.getElementById('bowl-bar').style.width = pct+'%';
+  document.getElementById('bowl-sub').textContent = pct+'% full';
+  const wp = Math.round(water);
+  document.getElementById('water-val').textContent = wp+'%';
+  document.getElementById('water-bar').style.width = wp+'%';
+  document.getElementById('water-sub').textContent = wp < 30 ? '⚠️ Low — refilling' : 'Level OK';
+  const near = pet < 30;
+  document.getElementById('pet-val').textContent = near ? 'HERE 🐶' : 'AWAY';
+  document.getElementById('pet-sub').textContent = near ? 'Pet at feeder!' : Math.round(pet)+'cm away';
+}
+setInterval(tick, 2000);
+
+// ─── Chart (History tab) ─────────────────────────────────────
+const foodData  = [145, 160, 112, 160, 80,  160, 160];
+const waterData = [70,  82,  60,  88,  45,  78,  72 ];
+const days = ['M','T','W','T','F','S','S'];
+const maxFood = Math.max(...foodData);
+const container = document.getElementById('chart-bars');
+foodData.forEach((f,i) => {
+  const col = document.createElement('div');
+  col.className = 'bar-col';
+  col.innerHTML = `
+    <div style="flex:1;width:100%;display:flex;flex-direction:column;justify-content:flex-end">
+      <div class="bar-fill water-bar" style="height:${waterData[i]}%;opacity:.5"></div>
+      <div class="bar-fill food-bar"  style="height:${(f/maxFood)*100}%"></div>
+    </div>
+    <span style="font-size:10px;color:var(--text2);margin-top:4px">${days[i]}</span>`;
+  container.appendChild(col);
+});
+
+// ─── Modal ────────────────────────────────────────────────────
+let pendingAction = null;
+function showModal(type) {
+  pendingAction = type;
+  const titles = {feed:'Manual Feed',water:'Manual Water',estop:'Emergency Stop'};
+  const msgs   = {
+    feed: 'Dispense 80g of food now?',
+    water:'Refill the water bowl now?',
+    estop:'⚠️ This will immediately stop all motors and pumps!'
+  };
+  const colors = {feed:'g',water:'b',estop:'r'};
+  const labels = {feed:'Feed Now',water:'Refill Now',estop:'STOP ALL'};
+  document.getElementById('m-title').textContent = titles[type];
+  document.getElementById('m-msg').textContent   = msgs[type];
+  const ok = document.getElementById('m-ok');
+  ok.className = 'sheet-ok '+colors[type];
+  ok.textContent = labels[type];
+  document.getElementById('modal').classList.add('show');
+}
+function closeModal() { document.getElementById('modal').classList.remove('show'); }
+function confirmModal() {
+  closeModal();
+  if (pendingAction === 'feed') {
+    showBanner('g','🍽️  Dispensing food...');
+    setTimeout(() => {
+      hideBanner();
+      bowl = Math.min(160, bowl + 80);
+      const pct = Math.round(bowl/160*100);
+      document.getElementById('bowl-val').textContent = bowl.toFixed(1)+'g';
+      document.getElementById('bowl-bar').style.width = pct+'%';
+      document.getElementById('bowl-sub').textContent = pct+'% full';
+      const cnt = parseInt(document.getElementById('h-count').textContent);
+      document.getElementById('h-count').textContent = cnt+1;
+      const now = new Date();
+      document.getElementById('h-time').textContent =
+        now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+      showToast('✅ Food dispensed successfully!','g');
+    }, 3500);
+    showToast('📡 Feed command sent','d');
+  } else if (pendingAction === 'water') {
+    showBanner('b','💧  Refilling water bowl...');
+    setTimeout(() => {
+      hideBanner();
+      water = 90;
+      document.getElementById('water-val').textContent = '90%';
+      document.getElementById('water-bar').style.width = '90%';
+      document.getElementById('water-sub').textContent = 'Level OK';
+      showToast('✅ Water bowl refilled!','b');
+    }, 4000);
+    showToast('📡 Water command sent','d');
+  } else if (pendingAction === 'estop') {
+    showToast('🛑 Emergency stop executed!','r');
+  }
+}
+function showBanner(type, text) {
+  const b = document.getElementById('activity-banner');
+  b.className = 'banner '+type;
+  document.getElementById('banner-text').textContent = text;
+  b.style.display = 'flex';
+}
+function hideBanner() {
+  document.getElementById('activity-banner').style.display = 'none';
+}
+
+// ─── Toast ────────────────────────────────────────────────────
+let toastT;
+function showToast(msg, cls) {
+  clearTimeout(toastT);
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show '+(cls||'d');
+  toastT = setTimeout(() => t.className = 'toast', 2800);
+}
+
+// ─── Close modal on backdrop tap ─────────────────────────────
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target.id === 'modal') closeModal();
+});
+</script>
+</body>
+</html>

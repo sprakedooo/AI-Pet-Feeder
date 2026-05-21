@@ -1,0 +1,92 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ──────────────────────────────────────────
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return request.auth.uid == uid;
+    }
+
+    function userOwnsDevice(deviceId) {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        deviceId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.deviceIds;
+    }
+
+    // ── Users ─────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read:  if isAuthenticated() && isOwner(userId);
+      allow create: if isAuthenticated() && isOwner(userId);
+      allow update: if isAuthenticated() && isOwner(userId);
+      allow delete: if false; // Never delete user accounts via client
+    }
+
+    // ── Devices ───────────────────────────────────────────────────
+    match /devices/{deviceId} {
+      allow read:   if isAuthenticated() && userOwnsDevice(deviceId);
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && userOwnsDevice(deviceId);
+      allow delete: if isAuthenticated() && userOwnsDevice(deviceId);
+    }
+
+    // ── Feeding Schedules ─────────────────────────────────────────
+    match /schedules/{scheduleId} {
+      allow read:   if isAuthenticated() && userOwnsDevice(resource.data.deviceId);
+      allow create: if isAuthenticated() && userOwnsDevice(request.resource.data.deviceId);
+      allow update: if isAuthenticated() && userOwnsDevice(resource.data.deviceId);
+      allow delete: if isAuthenticated() && userOwnsDevice(resource.data.deviceId);
+    }
+
+    // ── Feeding Logs ──────────────────────────────────────────────
+    match /feedingLogs/{logId} {
+      allow read:   if isAuthenticated() && userOwnsDevice(resource.data.deviceId);
+      allow create: if isAuthenticated();
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ── Water Logs ────────────────────────────────────────────────
+    match /waterLogs/{logId} {
+      allow read:   if isAuthenticated() && userOwnsDevice(resource.data.deviceId);
+      allow create: if isAuthenticated();
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ── Sensor Snapshots ──────────────────────────────────────────
+    match /sensorSnapshots/{snapshotId} {
+      allow read:   if isAuthenticated() && userOwnsDevice(resource.data.deviceId);
+      allow create: if isAuthenticated();
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // ── Notifications ─────────────────────────────────────────────
+    match /notifications/{notificationId} {
+      allow read:   if isAuthenticated() && isOwner(resource.data.userId);
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && isOwner(resource.data.userId)
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+      allow delete: if false;
+    }
+
+    // ── AI Insights ───────────────────────────────────────────────
+    match /aiInsights/{insightId} {
+      allow read:   if isAuthenticated() && userOwnsDevice(resource.data.deviceId);
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && userOwnsDevice(resource.data.deviceId)
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+      allow delete: if false;
+    }
+
+    // ── Settings ──────────────────────────────────────────────────
+    match /settings/{deviceId} {
+      allow read:   if isAuthenticated() && userOwnsDevice(deviceId);
+      allow write:  if isAuthenticated() && userOwnsDevice(deviceId);
+    }
+  }
+}

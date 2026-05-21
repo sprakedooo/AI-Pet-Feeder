@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Pet Feeder Dashboard",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-s", "preview", "--no-clipboard"],
+      "port": 3000,
+      "autoPort": true
+    }
+  ]
+}

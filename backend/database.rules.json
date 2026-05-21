@@ -1,0 +1,43 @@
+{
+  "rules": {
+    "devices": {
+      "$deviceId": {
+        ".read":  "auth != null",
+        ".write": "auth != null",
+
+        "status": {
+          ".read":  "auth != null",
+          ".write": "auth != null"
+        },
+        "sensors": {
+          ".read":  "auth != null",
+          ".write": "auth != null"
+        },
+        "state": {
+          ".read":  "auth != null",
+          ".write": "auth != null"
+        },
+        "commands": {
+          ".read":  "auth != null",
+          ".write": "auth != null"
+        },
+        "settings_cache": {
+          ".read":  "auth != null",
+          ".write": "auth != null"
+        },
+        "lastFeedingLog": {
+          ".read":  "auth != null",
+          ".write": "auth != null"
+        },
+        "lastWaterLog": {
+          ".read":  "auth != null",
+          ".write": "auth != null"
+        },
+        "pendingNotification": {
+          ".read":  "auth != null",
+          ".write": "auth != null"
+        }
+      }
+    }
+  }
+}

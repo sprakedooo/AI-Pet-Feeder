@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__Claude_Preview__preview_start",
+      "Bash(Get-ChildItem -Recurse \"C:\\\\Users\\\\jubil\\\\AI PET FEEDER\\\\mobile\\\\android\")",
+      "Bash(Select-Object FullName)"
+    ]
+  }
+}
