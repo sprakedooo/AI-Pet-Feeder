@@ -9,16 +9,30 @@ import 'providers/ai_provider.dart';
 import 'services/auth_service.dart';
 import 'services/database_service.dart';
 import 'services/notification_service.dart';
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   // Initialize FCM (background handler registered here before any UI)
   await NotificationService.instance.initialize();
 
   final dbService = DatabaseService();
   final authService = AuthService();
+
+  // Start/stop RTDB → Firestore bridge listeners whenever auth state changes.
+  // The bridge copies lastFeedingLog and pendingNotification from RTDB into
+  // Firestore so the app UI (feeding history, AI insights) stays current.
+  authService.authStateChanges.listen((user) {
+    if (user != null) {
+      dbService.startBridgeListeners(user.uid);
+    } else {
+      dbService.stopBridgeListeners();
+    }
+  });
 
   runApp(
     MultiProvider(

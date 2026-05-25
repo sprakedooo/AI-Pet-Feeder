@@ -20,7 +20,7 @@ class StatusIndicator extends StatelessWidget {
             boxShadow: [
               BoxShadow(
                 color: (online ? AppColors.success : AppColors.danger)
-                    .withOpacity(0.5),
+                    .withValues(alpha: 0.5),
                 blurRadius: 4,
                 spreadRadius: 1,
               ),

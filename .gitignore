@@ -1,0 +1,30 @@
+# ── Build outputs ──────────────────────────────────────────────────
+mobile/build/
+mobile/android/build/
+mobile/.dart_tool/
+mobile/.pub-cache/
+mobile/.pub/
+mobile/coverage/
+firmware/.pio/build/
+firmware/.pio/libdeps/
+
+# ── Node (Cloud Functions) ──────────────────────────────────────────
+node_modules/
+
+# ── OS junk ────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.log
+
+# ── IDE ────────────────────────────────────────────────────────────
+.idea/
+*.iml
+
+# ── Python ─────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+
+# NOTE: config.h, firebase_options.dart, google-services.json and all
+# other credential/config files are intentionally INCLUDED so the full
+# project can be transferred to another machine.

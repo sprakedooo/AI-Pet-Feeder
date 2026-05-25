@@ -203,7 +203,7 @@ class _InsightCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: _severityColor.withOpacity(0.1),
+                  color: _severityColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(_typeIcon, color: _severityColor, size: 22),
@@ -245,7 +245,7 @@ class _InsightCard extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
-                            color: _severityColor.withOpacity(0.1),
+                            color: _severityColor.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(insight.severityLabel,

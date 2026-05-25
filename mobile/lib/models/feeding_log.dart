@@ -8,7 +8,7 @@ class FeedingLog {
   final double dispensedGrams;
   final double bowlBefore;
   final double bowlAfter;
-  final int retryCount;
+  final int pulseCount;
   final bool jamDetected;
   final String triggerType;
   final DateTime timestamp;
@@ -21,7 +21,7 @@ class FeedingLog {
     required this.dispensedGrams,
     required this.bowlBefore,
     required this.bowlAfter,
-    required this.retryCount,
+    required this.pulseCount,
     required this.jamDetected,
     required this.triggerType,
     required this.timestamp,
@@ -37,9 +37,11 @@ class FeedingLog {
       dispensedGrams: (data['dispensedGrams'] as num?)?.toDouble() ?? 0,
       bowlBefore: (data['bowlBefore'] as num?)?.toDouble() ?? 0,
       bowlAfter: (data['bowlAfter'] as num?)?.toDouble() ?? 0,
-      retryCount: (data['retryCount'] as num?)?.toInt() ?? 0,
+      // Accept both 'pulseCount' (new) and 'retryCount' (legacy) field names.
+      pulseCount: (data['pulseCount'] as num?)?.toInt() ??
+          (data['retryCount'] as num?)?.toInt() ?? 0,
       jamDetected: data['jamDetected'] as bool? ?? false,
-      triggerType: data['triggerType'] as String? ?? 'scheduled',
+      triggerType: data['triggerType'] as String? ?? 'device',
       timestamp: (data['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }

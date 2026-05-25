@@ -12,10 +12,26 @@ class AIProvider extends ChangeNotifier {
   StreamSubscription<List<AIInsight>>? _sub;
 
   AIProvider(this._db) {
-    _sub = _db.insightsStream().listen((data) {
-      _insights = data;
-      _loading = false;
-      notifyListeners();
+    _sub = _db.insightsStream().listen(
+      (data) {
+        _insights = data;
+        _loading = false;
+        notifyListeners();
+      },
+      onError: (e) {
+        debugPrint('[AIProvider] stream error: $e');
+        _loading = false;
+        notifyListeners();
+      },
+    );
+
+    // Safety-net: if the stream doesn't emit within 5 s (e.g. Firestore
+    // permission error that slips through), stop the spinner anyway.
+    Future.delayed(const Duration(seconds: 5), () {
+      if (_loading) {
+        _loading = false;
+        notifyListeners();
+      }
     });
   }
 

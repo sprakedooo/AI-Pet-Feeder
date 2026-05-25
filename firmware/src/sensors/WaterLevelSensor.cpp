@@ -1,6 +1,7 @@
 #include "WaterLevelSensor.h"
 
-WaterLevelSensor::WaterLevelSensor() : _lastPercent(0) {}
+WaterLevelSensor::WaterLevelSensor()
+    : _lastPercent(0), _emptyADC(WATER_EMPTY_ADC), _fullADC(WATER_FULL_ADC) {}
 
 void WaterLevelSensor::begin() {
     // ADC pin — no pinMode needed (input-only GPIO 34)
@@ -33,6 +34,14 @@ bool WaterLevelSensor::isEmpty() const {
 }
 
 int WaterLevelSensor::_adcToPercent(int raw) {
-    raw = constrain(raw, WATER_EMPTY_ADC, WATER_FULL_ADC);
-    return map(raw, WATER_EMPTY_ADC, WATER_FULL_ADC, 0, 100);
+    raw = constrain(raw, _emptyADC, _fullADC);
+    return map(raw, _emptyADC, _fullADC, 0, 100);
+}
+
+void WaterLevelSensor::setCalibration(int emptyADC, int fullADC) {
+    if (emptyADC >= 0 && fullADC > emptyADC) {
+        _emptyADC = emptyADC;
+        _fullADC  = fullADC;
+        Serial.printf("[WaterSensor] Calibration updated: empty=%d full=%d\n", _emptyADC, _fullADC);
+    }
 }

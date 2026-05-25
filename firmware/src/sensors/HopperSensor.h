@@ -4,7 +4,7 @@
 
 enum class HopperStatus {
     OK,
-    LOW,
+    FOOD_LOW,
     EMPTY
 };
 

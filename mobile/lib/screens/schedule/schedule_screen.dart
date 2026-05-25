@@ -83,8 +83,8 @@ class _ScheduleTile extends StatelessWidget {
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: schedule.enabled
-                ? AppColors.primary.withOpacity(0.1)
-                : Colors.grey.withOpacity(0.1),
+                ? AppColors.primary.withValues(alpha: 0.1)
+                : Colors.grey.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
@@ -199,7 +199,7 @@ class _ScheduleEditSheetState extends State<_ScheduleEditSheet> {
     _time = s != null
         ? TimeOfDay(hour: s.hour, minute: s.minute)
         : const TimeOfDay(hour: 8, minute: 0);
-    _portionGrams = s?.portionGrams ?? AppConfig.defaultPortionGrams;
+    _portionGrams = (s?.portionGrams ?? AppConfig.defaultPortionGrams).clamp(20.0, 60.0);
     _days = List.from(
         s?.days ?? ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']);
   }
@@ -224,12 +224,14 @@ class _ScheduleEditSheetState extends State<_ScheduleEditSheet> {
       createdAt: widget.existing?.createdAt ?? DateTime.now(),
     );
 
+    // Close the sheet immediately — no waiting for the network round-trip.
+    if (mounted) Navigator.pop(context);
+
     if (widget.existing != null) {
       await provider.updateSchedule(schedule);
     } else {
       await provider.addSchedule(schedule);
     }
-    if (mounted) Navigator.pop(context);
   }
 
   @override
@@ -291,8 +293,8 @@ class _ScheduleEditSheetState extends State<_ScheduleEditSheet> {
             Slider(
               value: _portionGrams,
               min: 20,
-              max: 300,
-              divisions: 28,
+              max: 60,
+              divisions: 8,
               activeColor: AppColors.primary,
               onChanged: (v) => setState(() => _portionGrams = v),
             ),

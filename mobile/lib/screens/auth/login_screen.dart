@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/app_colors.dart';
 import '../../providers/auth_provider.dart';
+import '../splash_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -49,18 +50,19 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 60),
-              const Icon(Icons.pets, size: 64, color: AppColors.primary),
-              const SizedBox(height: 16),
+              const SizedBox(height: 48),
+              const Center(child: AppLogo(size: 90)),
+              const SizedBox(height: 20),
               const Text(
                 'Smart Pet Feeder',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 28,
+                  fontSize: 26,
                   fontWeight: FontWeight.bold,
                   color: AppColors.textPrimary,
                 ),
               ),
+              const SizedBox(height: 4),
               const Text(
                 'Sign in to your account',
                 textAlign: TextAlign.center,

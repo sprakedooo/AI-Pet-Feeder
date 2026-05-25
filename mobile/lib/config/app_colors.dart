@@ -28,8 +28,9 @@ class AppColors {
   static const Color chartSecondary = Color(0xFFFFC107);
 
   // Sensor card gradients
-  static const List<Color> foodGradient = [Color(0xFF66BB6A), Color(0xFF43A047)];
-  static const List<Color> waterGradient = [Color(0xFF42A5F5), Color(0xFF1E88E5)];
-  static const List<Color> hopperGradient = [Color(0xFFFFCA28), Color(0xFFFFB300)];
-  static const List<Color> petGradient = [Color(0xFFAB47BC), Color(0xFF8E24AA)];
+  static const List<Color> foodGradient      = [Color(0xFF66BB6A), Color(0xFF43A047)];
+  static const List<Color> waterGradient     = [Color(0xFF42A5F5), Color(0xFF1E88E5)];
+  static const List<Color> hopperGradient    = [Color(0xFFFFCA28), Color(0xFFFFB300)];
+  static const List<Color> reservoirGradient = [Color(0xFF26C6DA), Color(0xFF00ACC1)];
+  static const List<Color> petGradient       = [Color(0xFFAB47BC), Color(0xFF8E24AA)];
 }

@@ -25,6 +25,15 @@ class AuthProvider extends ChangeNotifier {
       }
       notifyListeners();
     });
+
+    // Safety-net: if Firebase Auth doesn't emit within 6 s (e.g. first cold
+    // start with no network), stop showing the splash and go to login screen.
+    Future.delayed(const Duration(seconds: 6), () {
+      if (_status == AuthStatus.unknown) {
+        _status = AuthStatus.unauthenticated;
+        notifyListeners();
+      }
+    });
   }
 
   AuthStatus get status => _status;

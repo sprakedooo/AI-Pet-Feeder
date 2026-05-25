@@ -5,6 +5,7 @@
 #include "../config.h"
 
 enum class WaterResult {
+    PENDING,              // pump is still running
     SUCCESS,
     SKIPPED_BOWL_FULL,
     SKIPPED_RESERVOIR_EMPTY,
@@ -21,23 +22,42 @@ struct WaterRecord {
     unsigned long timestamp;
 };
 
+// ── Non-blocking water refill ─────────────────────────────────────────────────
+//
+//  Usage:
+//    water.startRefill();               // call once; returns false if pre-checks fail
+//    while (!water.isComplete()) {
+//        water.update();                // call every loop() — checks level & timeout
+//    }
+//    WaterResult r = water.getLastRecord().result;
+//
 class WaterManager {
 public:
     WaterManager(PumpController& pump, SensorManager& sensors);
     void begin();
 
-    WaterResult refill();
+    // Validate pre-conditions and start the pump.
+    // Returns false if the refill was skipped (bowl already full / reservoir empty).
+    bool startRefill();
+
+    // Advance pump state — call every loop() while isRefilling().
+    void update();
+
+    bool isRefilling()  const;  // true while pump is running
+    bool isComplete()   const;  // true once done (success, skipped, or failure)
+
     void emergencyStop();
     const WaterRecord& getLastRecord() const;
-
-    void update();   // Call in main loop — handles safety timeout while pumping
 
 private:
     PumpController& _pump;
     SensorManager&  _sensors;
     WaterRecord     _lastRecord;
-    unsigned long   _pumpStartTime;
-    bool            _pumping;
 
-    void _stopPump(WaterResult result, WaterRecord& rec);
+    unsigned long _pumpStartTime;
+    unsigned long _lastLevelCheck;
+    bool          _pumping;
+    bool          _complete;
+
+    void _stopPump(WaterResult result, int levelAfter);
 };

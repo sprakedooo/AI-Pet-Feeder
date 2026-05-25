@@ -4,7 +4,7 @@ HopperSensor::HopperSensor() : _lastStatus(HopperStatus::OK) {}
 
 void HopperSensor::begin() {
     pinMode(PIN_HOPPER_LED, OUTPUT);
-    digitalWrite(PIN_HOPPER_LED, LOW);
+    digitalWrite(PIN_HOPPER_LED, HOPPER_LED_OFF);  // LED off at startup
     // GPIO 35 is ADC input-only — no pinMode needed
     Serial.println("[Hopper] Initialized.");
 }
@@ -13,21 +13,24 @@ HopperStatus HopperSensor::read() {
     int ldrValue = _readLDR();
 
 #ifdef HOPPER_LAYOUT_BEAM_BREAK
-    // BEAM-BREAK: food blocks the beam → LDR dark → HIGH ADC = food present
-    //             no food             → beam hits LDR → LOW ADC = empty
-    bool foodPresent = (ldrValue >= HOPPER_FOOD_PRESENT_ADC);
-    bool foodLow     = (ldrValue >= HOPPER_FOOD_PRESENT_ADC / 2) && !foodPresent;
-#else
-    // REFLECTIVE: food reflects LED back to LDR → LDR lit → LOW ADC = food present
-    //             no food → no reflection → LDR dark → HIGH ADC = empty
+    // BEAM-BREAK wiring: LDR has HIGH resistance when light hits it (unusual but confirmed).
+    // Beam free  (no food)  → LDR lit   → HIGH resistance → HIGH ADC = empty
+    // Beam blocked by food  → LDR dark  → LOW  resistance → LOW  ADC = food present
+    Serial.printf("[Hopper] Raw LDR ADC: %d (threshold: %d)\n", ldrValue, HOPPER_FOOD_PRESENT_ADC);
     bool foodPresent = (ldrValue < HOPPER_FOOD_PRESENT_ADC);
-    bool foodLow     = (ldrValue < HOPPER_FOOD_PRESENT_ADC * 3 / 2) && !foodPresent;
+    bool foodLow     = !foodPresent && (ldrValue < (HOPPER_FOOD_PRESENT_ADC * 3 / 2));
+#else
+    // REFLECTIVE (pull-up wiring: VCC → LDR → ADC → R → GND)
+    // Food reflects LED light to LDR  → LDR lit  → HIGH ADC  = food present
+    // No food, no reflection           → LDR dark → LOW  ADC  = empty
+    bool foodPresent = (ldrValue >= HOPPER_FOOD_PRESENT_ADC);
+    bool foodLow     = !foodPresent && (ldrValue >= (HOPPER_FOOD_PRESENT_ADC / 2));
 #endif
 
     if (foodPresent) {
         _lastStatus = HopperStatus::OK;
     } else if (foodLow) {
-        _lastStatus = HopperStatus::LOW;
+        _lastStatus = HopperStatus::FOOD_LOW;
     } else {
         _lastStatus = HopperStatus::EMPTY;
     }
@@ -42,20 +45,19 @@ HopperStatus HopperSensor::getLastStatus() const {
 const char* HopperSensor::statusString() const {
     switch (_lastStatus) {
         case HopperStatus::OK:    return "ok";
-        case HopperStatus::LOW:   return "low";
+        case HopperStatus::FOOD_LOW:   return "low";
         case HopperStatus::EMPTY: return "empty";
         default:                  return "unknown";
     }
 }
 
 bool HopperSensor::hasFeed() const {
-    return _lastStatus == HopperStatus::OK || _lastStatus == HopperStatus::LOW;
+    return _lastStatus == HopperStatus::OK || _lastStatus == HopperStatus::FOOD_LOW;
 }
 
 int HopperSensor::_readLDR() {
-    // Turn LED on briefly for consistent reading
-    digitalWrite(PIN_HOPPER_LED, HIGH);
-    delay(50);
+    digitalWrite(PIN_HOPPER_LED, HOPPER_LED_ON);  // LED on for measurement
+    delay(50);                                     // Let LED stabilise
 
     long sum = 0;
     for (int i = 0; i < HOPPER_SAMPLE_COUNT; i++) {
@@ -63,6 +65,6 @@ int HopperSensor::_readLDR() {
         delay(10);
     }
 
-    digitalWrite(PIN_HOPPER_LED, LOW);
+    digitalWrite(PIN_HOPPER_LED, HOPPER_LED_OFF); // LED off after measurement
     return (int)(sum / HOPPER_SAMPLE_COUNT);
 }

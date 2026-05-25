@@ -11,6 +11,7 @@ enum class InsightType {
     SCHEDULE_INCONSISTENCY,
     OVERFEEDING_RISK,
     BEHAVIOR_CHANGE,
+    FEEDING_SUMMARY,   // always-fires summary — shows even when everything is normal
     INFO
 };
 
@@ -72,6 +73,7 @@ private:
     int _checkSkippedMeals(AIInsight* buf, int idx);
     int _checkRefillPrediction(AIInsight* buf, int idx);
     int _checkOverfeeding(AIInsight* buf, int idx);
+    int _checkFeedingSummary(AIInsight* buf, int idx); // always fires, shows overall status
 
     float _avgDispensedGrams() const;
     float _avgWaterDelta() const;

@@ -1,8 +1,14 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+// FCM + local notifications are only supported on Android / iOS.
+// On Windows and Web we skip all of this gracefully.
+bool get _notificationsSupported =>
+    !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Background message handler — MUST be a top-level function (not a class method)
@@ -40,6 +46,11 @@ class NotificationService {
 
   /// Call once from main.dart AFTER Firebase.initializeApp().
   Future<void> initialize({String? userId}) async {
+    if (!_notificationsSupported) {
+      debugPrint('[FCM] Notifications not supported on this platform — skipped.');
+      return;
+    }
+
     // 1. Register the background handler first.
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
@@ -89,6 +100,7 @@ class NotificationService {
   /// Gets the current FCM token and saves it to Firestore under users/{userId}.
   /// Call this after the user signs in.
   Future<void> registerToken(String userId) async {
+    if (!_notificationsSupported) return;
     try {
       final token = await _fcm.getToken();
       if (token != null) {
@@ -111,6 +123,7 @@ class NotificationService {
   /// Call this when the user signs out — removes stale token from Firestore
   /// so they stop receiving notifications after logout.
   Future<void> unregisterToken(String userId) async {
+    if (!_notificationsSupported) return;
     try {
       await _fcm.deleteToken();
       await _firestore.collection('users').doc(userId).update({

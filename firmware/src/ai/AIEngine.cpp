@@ -37,13 +37,19 @@ void AIEngine::recordHopperEmpty() {
 
 int AIEngine::analyze(AIInsight* buf, int maxInsights) {
     int count = 0;
-    if (_feedCount < 3) return 0;  // Need at least 3 events to analyze
+    if (_feedCount < 1) return 0;  // Need at least 1 feeding recorded
 
-    count += _checkAppetite(buf, count);
-    if (count < maxInsights) count += _checkSkippedMeals(buf, count);
-    if (count < maxInsights) count += _checkWaterConsumption(buf, count);
-    if (count < maxInsights) count += _checkRefillPrediction(buf, count);
-    if (count < maxInsights) count += _checkOverfeeding(buf, count);
+    // Anomaly checks (need 3+ feedings for reliable pattern detection)
+    if (_feedCount >= 3) {
+        count += _checkAppetite(buf, count);
+        if (count < maxInsights) count += _checkSkippedMeals(buf, count);
+        if (count < maxInsights) count += _checkWaterConsumption(buf, count);
+        if (count < maxInsights) count += _checkRefillPrediction(buf, count);
+        if (count < maxInsights) count += _checkOverfeeding(buf, count);
+    }
+
+    // Always-fires summary (shows even when everything looks normal)
+    if (count < maxInsights) count += _checkFeedingSummary(buf, count);
 
     Serial.printf("[AI] Analysis complete. %d insight(s) generated.\n", count);
     return count;
@@ -155,6 +161,43 @@ int AIEngine::_checkOverfeeding(AIInsight* buf, int idx) {
         return 1;
     }
     return 0;
+}
+
+// ── Rule: Feeding Summary (always fires) ─────────────────────────
+int AIEngine::_checkFeedingSummary(AIInsight* buf, int idx) {
+    int total = min(_feedCount, HISTORY_SIZE);
+    float avg = _avgDispensedGrams();
+    if (avg < 0) avg = 0;
+
+    int skipped = 0;
+    for (int i = 0; i < total; i++) {
+        if (_feedHistory[i].skipped) skipped++;
+    }
+    int successful = total - skipped;
+
+    // Build a status line based on eating pattern
+    const char* status;
+    if (total < 3) {
+        status = "Still collecting data — check back after a few more feedings.";
+    } else if (avg >= DEFAULT_TARGET_GRAMS * 0.85f) {
+        status = "Eating well! Portion sizes look healthy.";
+    } else if (avg >= DEFAULT_TARGET_GRAMS * 0.6f) {
+        status = "Appetite is slightly below average. Monitor closely.";
+    } else {
+        status = "Low food intake detected — consider checking on your pet.";
+    }
+
+    buf[idx].type         = InsightType::FEEDING_SUMMARY;
+    buf[idx].severity     = 1;
+    buf[idx].isActionable = false;
+    buf[idx].generatedAt  = millis();
+    snprintf(buf[idx].title, sizeof(buf[idx].title),
+             "Feeding Report (%d session%s)", total, total == 1 ? "" : "s");
+    snprintf(buf[idx].message, sizeof(buf[idx].message),
+             "%d successful feeding%s, %d skipped. Avg portion: %.0fg. %s",
+             successful, successful == 1 ? "" : "s",
+             skipped, avg, status);
+    return 1;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────

@@ -51,17 +51,40 @@ class FeedingProvider extends ChangeNotifier {
       _logs.isNotEmpty ? _logs.first : null;
 
   void _init() {
-    _schedulesSub = _db.schedulesStream().listen((data) {
-      _schedules = data;
-      _schedulesLoading = false;
-      notifyListeners();
+    // Safety-net: stop spinners after 6 s even if streams never emit
+    // (e.g. Firestore permission error, missing composite index, no data yet).
+    Future.delayed(const Duration(seconds: 6), () {
+      bool changed = false;
+      if (_schedulesLoading) { _schedulesLoading = false; changed = true; }
+      if (_logsLoading)      { _logsLoading      = false; changed = true; }
+      if (changed) notifyListeners();
     });
 
-    _logsSub = _db.feedingLogsStream().listen((data) {
-      _logs = data;
-      _logsLoading = false;
-      notifyListeners();
-    });
+    _schedulesSub = _db.schedulesStream().listen(
+      (data) {
+        _schedules = data;
+        _schedulesLoading = false;
+        notifyListeners();
+      },
+      onError: (e) {
+        debugPrint('[FeedingProvider] schedulesStream error: $e');
+        _schedulesLoading = false;
+        notifyListeners();
+      },
+    );
+
+    _logsSub = _db.feedingLogsStream().listen(
+      (data) {
+        _logs = data;
+        _logsLoading = false;
+        notifyListeners();
+      },
+      onError: (e) {
+        debugPrint('[FeedingProvider] feedingLogsStream error: $e');
+        _logsLoading = false;
+        notifyListeners();
+      },
+    );
   }
 
   Future<void> addSchedule(FeedingSchedule schedule) =>

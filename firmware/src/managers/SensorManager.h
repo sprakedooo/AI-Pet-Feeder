@@ -9,10 +9,11 @@
 
 struct SensorData {
     float   bowlWeightGrams;
-    int     bowlWeightPercent;   // 0–100 based on max bowl capacity
-    int     waterLevelPercent;
+    int     bowlWeightPercent;    // 0–100 based on max bowl capacity
+    int     waterLevelPercent;    // pet drinking bowl level
+    int     reservoirLevelPercent;// refill tank level (0–100%)
+    bool    reservoirHasWater;    // true = above low threshold (safe to pump)
     HopperStatus hopperStatus;
-    bool    reservoirHasWater;
     bool    petDetected;
     float   petDistanceCm;
     unsigned long timestamp;
