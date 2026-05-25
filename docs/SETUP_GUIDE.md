@@ -4,199 +4,192 @@ Follow these steps **in order**. Each section tells you what you need and exactl
 
 ---
 
-## Prerequisites
-
-Install these tools on your computer before starting:
-
-| Tool | Purpose | Download |
-|---|---|---|
-| **Flutter SDK** (3.x) | Build mobile app | https://flutter.dev/docs/get-started/install |
-| **Android Studio** | Android build tools + emulator | https://developer.android.com/studio |
-| **PlatformIO** (VS Code extension) | Flash ESP32 firmware | https://platformio.org/install/ide?install=vscode |
-| **Node.js** (v18+) | Run Firebase CLI | https://nodejs.org |
-| **Firebase CLI** | Deploy backend | `npm install -g firebase-tools` |
-| **flutterfire CLI** | Generate Firebase config | `dart pub global activate flutterfire_cli` |
-
----
-
-## Step 1 — Create Your Firebase Project
-
-1. Go to **https://console.firebase.google.com**
-2. Click **Add project** → name it (e.g. `ai-pet-feeder`) → Continue
-3. Disable Google Analytics (optional) → **Create project**
-
-### Enable required services:
-
-#### Authentication
-1. Left sidebar → **Build → Authentication → Get started**
-2. Click **Sign-in method** tab
-3. Enable **Email/Password** → Save
-
-#### Firestore Database
-1. Left sidebar → **Build → Firestore Database → Create database**
-2. Choose **Start in production mode** → Next
-3. Select a location closest to you → **Enable**
-
-#### Realtime Database
-1. Left sidebar → **Build → Realtime Database → Create database**
-2. Choose a location → **Start in locked mode** → **Enable**
-3. After creation, copy the **Database URL** — looks like:
-   `https://your-project-id-default-rtdb.firebaseio.com`
-   You will need this in Step 4.
-
-#### Cloud Messaging
-1. Left sidebar → **Project Settings** (gear icon)
-2. Click **Cloud Messaging** tab — it is enabled by default, nothing to configure
-
-#### Cloud Functions
-1. Left sidebar → **Build → Functions → Get started**
-2. Follow prompts — requires upgrading to **Blaze (pay-as-you-go)** plan
-   *(The free tier is enough for personal use — you will not be charged unless traffic is very high)*
-
----
-
-## Step 2 — Create the ESP32 Service Account
-
-The ESP32 needs its own Firebase user account to authenticate.
-
-1. In Firebase Console → **Authentication → Users tab**
-2. Click **Add user**
-3. Enter:
-   - **Email:** `device@petfeeder.local` (or any email you want)
-   - **Password:** choose a strong password
-4. Click **Add user**
-5. Note down the email and password — you will paste them into `config.h` in Step 4
-
----
-
-## Step 3 — Configure the Flutter App
-
-### 3a. Generate firebase_options.dart
-
-Open a terminal, navigate to the mobile folder:
+## Getting the Code on a New Machine
 
 ```bash
-cd "C:\Users\jubil\AI PET FEEDER\mobile"
+git clone https://github.com/sprakedooo/AI-Pet-Feeder.git
+cd AI-Pet-Feeder
 ```
 
-Log in to Firebase and run flutterfire configure:
+Everything — including credentials and config files — is in the repo. No extra secrets to copy manually.
 
+---
+
+## Required Software
+
+Install these tools **before** doing anything else:
+
+| Tool | Version | Purpose | Download |
+|---|---|---|---|
+| **Flutter SDK** | 3.x | Build mobile app | https://flutter.dev/docs/get-started/install |
+| **Android Studio** | Latest | Android SDK + build tools | https://developer.android.com/studio |
+| **Java JDK** | 17+ | Required by Android build | bundled with Android Studio or https://adoptium.net |
+| **VS Code** | Latest | Firmware editor | https://code.visualstudio.com |
+| **PlatformIO** extension | Latest | Flash ESP32 firmware | Install from VS Code Extensions → search "PlatformIO IDE" |
+| **Python** | 3.8+ | Icon generator script | https://www.python.org/downloads |
+| **Node.js** | 18+ | Firebase CLI | https://nodejs.org |
+| **Git** | Latest | Clone / version control | https://git-scm.com |
+
+### After installing, run these one-time setup commands:
+
+```bash
+# Install Firebase CLI
+npm install -g firebase-tools
+
+# Install flutterfire CLI (generates Firebase config for Flutter)
+dart pub global activate flutterfire_cli
+
+# Install Python Pillow (used by generate_icon.py)
+pip install Pillow
+
+# Verify Flutter is set up correctly
+flutter doctor
+```
+
+`flutter doctor` will tell you if anything is missing (Android SDK, emulator, etc). Fix all red ✗ items before continuing.
+
+---
+
+## Step 1 — Firebase Project (skip if already done)
+
+> ✅ If you cloned from this repo, Firebase is already configured — skip to Step 3.
+
+1. Go to **https://console.firebase.google.com**
+2. Click **Add project** → name it → Continue
+3. Disable Google Analytics (optional) → **Create project**
+
+### Enable these services:
+
+**Authentication:**
+- Build → Authentication → Get started → Sign-in method → Enable **Email/Password**
+
+**Firestore Database:**
+- Build → Firestore Database → Create database → Production mode → choose your region
+
+**Realtime Database:**
+- Build → Realtime Database → Create database → Locked mode
+- Copy the **Database URL**: `https://your-project-id-default-rtdb.firebaseio.com`
+
+**Cloud Functions:**
+- Build → Functions → Get started → upgrade to **Blaze (pay-as-you-go)** plan
+  *(Free tier is sufficient for personal use)*
+
+---
+
+## Step 2 — ESP32 Service Account (skip if already done)
+
+> ✅ Already configured in config.h if cloned from this repo.
+
+1. Firebase Console → Authentication → Users tab → **Add user**
+2. Email: `device@petfeeder.local` | Password: choose a strong one
+3. Copy the password into `firmware/src/config.h`:
+   ```cpp
+   #define FIREBASE_AUTH_PASSWORD   "your-password-here"
+   ```
+
+---
+
+## Step 3 — Mobile App Setup
+
+### 3a. Install Flutter packages
+
+```bash
+cd AI-Pet-Feeder/mobile
+flutter pub get
+```
+
+### 3b. Verify firebase_options.dart exists
+
+```bash
+ls lib/firebase_options.dart    # should exist (committed to repo)
+```
+
+If it's missing, regenerate it:
 ```bash
 firebase login
 flutterfire configure
+# Select your Firebase project → Android → accept defaults
 ```
 
-When prompted:
-- Select your Firebase project (the one you created in Step 1)
-- Select **Android** (and iOS if you want iOS support)
-- Accept the default app ID or enter `com.example.smart_pet_feeder`
-
-This generates `lib/firebase_options.dart` automatically.
-
-### 3b. Update main.dart to use the generated options
-
-Open `mobile/lib/main.dart` and update the Firebase init line:
-
-```dart
-import 'firebase_options.dart';           // add this import
-
-// change this line:
-await Firebase.initializeApp();
-
-// to this:
-await Firebase.initializeApp(
-  options: DefaultFirebaseOptions.currentPlatform,
-);
-```
-
-### 3c. Update the RTDB URL in app_config.dart
-
-Open `mobile/lib/config/app_config.dart` and replace the placeholder:
-
-```dart
-static const String rtdbUrl = 'https://YOUR-PROJECT-ID-default-rtdb.firebaseio.com';
-//                                      ↑ paste your actual Realtime Database URL here
-```
-
-### 3d. Place google-services.json
-
-1. In Firebase Console → **Project Settings → Your apps**
-2. If no Android app exists, click **Add app → Android**
-   - Package name: `com.example.smart_pet_feeder`
-   - Register app
-3. Download **google-services.json**
-4. Place it at:
-   ```
-   mobile/android/app/google-services.json
-   ```
-
-### 3e. Create the asset folders
-
-Flutter will fail to build if these declared asset folders do not exist:
+### 3c. Verify google-services.json exists
 
 ```bash
-mkdir "C:\Users\jubil\AI PET FEEDER\mobile\assets\images"
-mkdir "C:\Users\jubil\AI PET FEEDER\mobile\assets\animations"
+ls android/app/google-services.json    # should exist (committed to repo)
 ```
 
-Place at least one placeholder file in each folder (e.g. a blank `.gitkeep` file),
-or remove the asset entries from `pubspec.yaml` if you have no images yet.
+If it's missing:
+1. Firebase Console → Project Settings → Your apps → Android app
+2. Download **google-services.json** → place at `android/app/google-services.json`
 
-### 3f. Generate the Android Gradle wrapper
+### 3d. Build and install
 
-Run this once inside the mobile folder to generate the missing Gradle wrapper files:
-
+Run directly on a connected phone:
 ```bash
-cd "C:\Users\jubil\AI PET FEEDER\mobile"
-flutter create . --project-name smart_pet_feeder
+flutter run
 ```
 
-This only generates missing files — it will not overwrite your existing code.
+Or build a release APK to install manually:
+```bash
+flutter build apk --release --no-tree-shake-icons
+# APK saved to: build/app/outputs/flutter-apk/app-release.apk
+```
+
+Transfer the APK to your Android phone and tap to install.
+*(You may need to enable "Install from unknown sources" in Android settings.)*
 
 ---
 
-## Step 4 — Configure the ESP32 Firmware
+## Step 4 — Firmware Setup
 
-Open `firmware/src/config.h` and fill in every placeholder:
+### 4a. Open in VS Code + PlatformIO
+
+1. Open VS Code
+2. File → Open Folder → select `AI-Pet-Feeder/firmware`
+3. PlatformIO will automatically install all ESP32 libraries (first time takes ~5 minutes)
+
+### 4b. Check config.h
+
+Open `firmware/src/config.h` — verify these match your setup:
 
 ```cpp
-// ── WiFi ──────────────────────────────────────────────────────────
-#define WIFI_SSID           "YourActualWiFiName"
-#define WIFI_PASSWORD       "YourActualWiFiPassword"
+// WiFi
+#define WIFI_SSID           "YourWiFiName"
+#define WIFI_PASSWORD       "YourWiFiPassword"
 
-// ── Firebase ──────────────────────────────────────────────────────
-// Web API Key: Firebase Console → Project Settings → General → Web API Key
+// Firebase (already filled in from repo)
 #define FIREBASE_API_KEY         "AIzaSy..."
-
-// Realtime Database URL (copied in Step 1)
-#define FIREBASE_DATABASE_URL    "https://your-project-id-default-rtdb.firebaseio.com"
-
-// Service account created in Step 2
+#define FIREBASE_DATABASE_URL    "https://...firebaseio.com"
 #define FIREBASE_AUTH_EMAIL      "device@petfeeder.local"
-#define FIREBASE_AUTH_PASSWORD   "YourStrongPassword"
+#define FIREBASE_AUTH_PASSWORD   "your-password"
+```
+
+### 4c. Flash to ESP32
+
+1. Connect ESP32 via USB
+2. Click the **→ Upload** button in PlatformIO toolbar (or press `Ctrl+Alt+U`)
+3. Wait for upload — should say `[SUCCESS]` at the end
+4. Open Serial Monitor at **115200 baud** — you should see:
+
+```
+[WiFi] Connecting to YourWiFiName...
+[WiFi] Connected. IP: 192.168.x.x
+[Firebase] Connected.
+[StateMachine] State: IDLE
 ```
 
 ---
 
-## Step 5 — Deploy the Firebase Backend
+## Step 5 — Deploy Firebase Backend
 
 ```bash
-cd "C:\Users\jubil\AI PET FEEDER\backend"
+cd AI-Pet-Feeder/backend
 firebase login
 firebase use --add    # select your project when prompted
-```
 
-Install Cloud Function dependencies:
-
-```bash
 cd functions
 npm install
 cd ..
-```
 
-Deploy everything at once:
-
-```bash
 firebase deploy --only firestore:rules,firestore:indexes,database,functions
 ```
 
@@ -212,175 +205,92 @@ Expected output:
 
 ## Step 6 — Sensor Calibration
 
-You must calibrate 5 values before readings are accurate.
-Do this **after wiring everything** and **after flashing the firmware**.
-
+Do this **after wiring everything** and **after flashing firmware**.
 Open PlatformIO Serial Monitor at **115200 baud** to see live readings.
 
----
+### 6a. Load Cell — Food Bowl Weight (GPIO 4 & 5)
 
-### 6a. Load Cell — Food Bowl Weight (GPIO 4/5)
+1. Place **empty bowl** on load cell → power on (firmware auto-tares on boot)
+2. Place a **known weight** (e.g. 100g) on the bowl
+3. Watch Serial Monitor for the raw reading
+4. Calculate: `CALIBRATION_FACTOR = raw_reading / known_weight_grams`
+5. Update `config.h`: `#define LOAD_CELL_CALIBRATION_FACTOR  420.0f`
+6. Re-flash and verify reading matches known weight
 
-1. Place the **empty bowl** on the load cell and power on the ESP32
-2. The firmware tares automatically on boot
-3. Place a **known weight** on the bowl (e.g. a 100g coin stack or kitchen weights)
-4. Watch Serial Monitor for the raw reading
-5. Calculate:
-   ```
-   CALIBRATION_FACTOR = raw_reading / known_weight_grams
-   ```
-6. Open `config.h` and update:
-   ```cpp
-   #define LOAD_CELL_CALIBRATION_FACTOR   420.0f   // ← replace with your value
-   ```
-7. Reflash and confirm the reading matches your known weight
+### 6b. Water Bowl Sensor (GPIO 34)
 
----
-
-### 6b. Water Bowl Level Sensor (GPIO 34)
-
-1. With the water bowl **completely empty**, note the ADC value in Serial Monitor
-   → this is `WATER_EMPTY_ADC`
-2. Fill the bowl to the **maximum fill line**, note the ADC value
-   → this is `WATER_FULL_ADC`
+1. **Empty bowl** → note ADC value → `WATER_EMPTY_ADC`
+2. **Full bowl** → note ADC value → `WATER_FULL_ADC`
 3. Update `config.h`:
    ```cpp
-   #define WATER_EMPTY_ADC    200    // ← replace with your empty reading
-   #define WATER_FULL_ADC    3800    // ← replace with your full reading
+   #define WATER_EMPTY_ADC    100
+   #define WATER_FULL_ADC    1800
    ```
 
----
+### 6c. Reservoir Sensor (GPIO 33)
 
-### 6c. Reservoir Level Sensor (GPIO 33)
-
-Same process as the bowl sensor, but for the refill tank:
-
-1. **Empty reservoir** → note ADC value → `RESERVOIR_EMPTY_ADC`
-2. **Full reservoir** → note ADC value → `RESERVOIR_FULL_ADC`
-3. Update `config.h`:
-   ```cpp
-   #define RESERVOIR_EMPTY_ADC    200    // ← replace with your empty reading
-   #define RESERVOIR_FULL_ADC    3800    // ← replace with your full reading
-   ```
-
-> **Important:** Once calibrated, the pump will automatically refuse to start
-> if the reservoir drops below 20% — protecting it from dry running.
-
----
-
-### 6d. Hopper Food Sensor — LDR + LED Beam Break (GPIO 35 / GPIO 2)
-
-1. **Fill the hopper with food** (beam is blocked) → note ADC reading → `full_reading`
-2. **Empty the hopper completely** (beam passes through) → note ADC reading → `empty_reading`
-3. Set threshold to halfway between the two:
-   ```
-   HOPPER_FOOD_PRESENT_ADC = (full_reading + empty_reading) / 2
-   ```
-   Example: full = 3100, empty = 250 → threshold = 1675
-4. Update `config.h`:
-   ```cpp
-   #define HOPPER_FOOD_PRESENT_ADC    2000    // ← replace with your calculated value
-   ```
-
----
-
-### 6e. Pet Detection — Ultrasonic Sensor (GPIO 12/14)
-
-1. Mount the sensor **above the feeding bowl pointing downward**
-2. With **no pet present**, note the distance reading in Serial Monitor (e.g. 42 cm)
-3. Set threshold to ~70% of that distance:
-   ```
-   PET_DETECTION_DISTANCE_CM = mounting_height_cm × 0.70
-   ```
-   Example: sensor at 40 cm → threshold = 28 cm
-4. Update `config.h`:
-   ```cpp
-   #define PET_DETECTION_DISTANCE_CM  30    // ← replace with your calculated value
-   ```
-
----
-
-## Step 7 — Flash the ESP32
-
-1. Open the `firmware/` folder in **VS Code with PlatformIO**
-2. Connect the ESP32 via USB
-3. Click the **Upload** button (→) in the PlatformIO toolbar
-4. Wait for upload to complete
-5. Open Serial Monitor at **115200 baud** — you should see:
-
-```
-[WiFi] Connecting to YourWiFiName...
-[WiFi] Connected. IP: 192.168.x.x
-[Firebase] Connected.
-[SensorManager] All sensors initialized.
-[Sensors] Bowl:0.0g(0%) Water:45% Reservoir:78% Hopper:ok Pet:no(112.0cm)
-[StateMachine] State: IDLE
+Same process as 6b for the refill tank:
+```cpp
+#define RESERVOIR_EMPTY_ADC    100
+#define RESERVOIR_FULL_ADC    1800
 ```
 
-If WiFi does not connect within 30 seconds, the ESP32 will restart automatically.
+### 6d. Hopper Food Sensor / LDR (GPIO 35)
 
----
+1. **Full hopper** (beam blocked) → note ADC reading
+2. **Empty hopper** (beam free) → note ADC reading
+3. Threshold = `(full_reading + empty_reading) / 2`
+4. Update: `#define HOPPER_FOOD_PRESENT_ADC  900`
 
-## Step 8 — Build and Install the Flutter App
+### 6e. Pet Detection — Ultrasonic (GPIO 12 & 14)
 
-```bash
-cd "C:\Users\jubil\AI PET FEEDER\mobile"
-flutter pub get
-flutter run                  # run directly on connected phone
-```
-
-Or build a release APK:
-
-```bash
-flutter build apk --release
-```
-
-The APK will be at:
-```
-mobile/build/app/outputs/flutter-apk/app-release.apk
-```
-
-Transfer it to your Android phone and install it.
-*(Enable "Install from unknown sources" in Android settings if prompted.)*
-
----
-
-## Step 9 — First Run Checklist
-
-Verify each item after everything is running:
-
-- [ ] App opens without crash
-- [ ] Login / Register works
-- [ ] Dashboard shows live sensor readings (not all zeros)
-- [ ] Sensor values update every ~10 seconds
-- [ ] **Feed Now** button triggers the servo and load cell detects a weight change
-- [ ] Servo opens to **45°** and closes back to **0°** cleanly
-- [ ] **Water Now** button starts the pump and stops when bowl reaches 85%
-- [ ] Pump does NOT start when reservoir is below 20%
-- [ ] Feeding schedule saves in app and ESP32 picks it up within 5 minutes
-- [ ] Push notification arrives on phone when feeding completes
-- [ ] AI Insights tab populates after a few feeding cycles
+1. Mount sensor **above bowl pointing down**
+2. With **no pet present**, note distance reading (e.g. 42 cm)
+3. Set threshold to ~70% of mounting height: `PET_DETECTION_DISTANCE_CM = height × 0.70`
+4. Update: `#define PET_DETECTION_DISTANCE_CM  30`
 
 ---
 
 ## GPIO Reference
 
-| GPIO | Sensor / Actuator | Type |
+| GPIO | Sensor / Actuator | Notes |
 |---|---|---|
 | 4 | HX711 Data (load cell) | Digital |
 | 5 | HX711 Clock (load cell) | Digital |
 | 12 | Ultrasonic TRIG | Digital out |
-| 14 | Ultrasonic ECHO | Digital in |
 | 13 | Servo (food dispenser) | PWM |
-| 2 | Hopper LED | Digital out |
-| 35 | Hopper LDR | ADC1 (analog in) |
-| 34 | Water bowl level sensor | ADC1 (analog in) |
-| 33 | Reservoir level sensor | ADC1 (analog in) |
-| 26 | Pump relay | Digital out |
+| 14 | Ultrasonic ECHO | Digital in |
+| 25 | **Physical feed button** | Digital in, INPUT_PULLUP — wire to GND |
+| 26 | Pump relay | Digital out (active LOW) |
+| 27 | Hopper LED | Digital out |
+| 33 | Reservoir level sensor | ADC1 analog in |
+| 34 | Water bowl level sensor | ADC1 analog in |
+| 35 | Hopper LDR | ADC1 analog in |
 
-> All three analog sensors (GPIO 33, 34, 35) use **ADC1** — these work correctly
-> while WiFi is active. Avoid ADC2 pins (0, 2, 4, 12–15, 25–27) for analog reads
-> when WiFi is on.
+**Physical button wiring:**
+```
+ESP32 GPIO 25 ──── [momentary push button] ──── GND
+```
+No resistor needed — firmware uses internal pull-up. Press to manually dispense food.
+
+> All analog sensors use **ADC1** (GPIO 32–39) — safe while WiFi is active.
+> Never use ADC2 pins for analog reads when WiFi is on.
+
+---
+
+## First Run Checklist
+
+- [ ] App opens and shows login/register screen
+- [ ] Login works and dashboard loads
+- [ ] Dashboard shows live sensor readings (not all zeros)
+- [ ] Sensor values update every ~10 seconds
+- [ ] "Feed Now" button triggers the servo and bowl weight increases
+- [ ] "Water Now" button starts pump and stops at full level
+- [ ] Pump does NOT start when reservoir is below 10%
+- [ ] Physical button on GPIO 25 triggers feeding
+- [ ] Feeding schedule created in app is picked up by ESP32 within 5 minutes
+- [ ] AI Insights tab populates after a few feedings
+- [ ] Push notification arrives on phone when feeding completes
 
 ---
 
@@ -388,17 +298,13 @@ Verify each item after everything is running:
 
 | Problem | Likely cause | Fix |
 |---|---|---|
-| App crashes on launch | `firebase_options.dart` missing | Run `flutterfire configure` (Step 3a) |
+| `flutter doctor` shows errors | Missing SDK tools | Follow the fix suggestions it prints |
+| App crashes on launch | `firebase_options.dart` wrong | Re-run `flutterfire configure` |
 | ESP32 stuck on "Connecting to WiFi" | Wrong credentials | Check `WIFI_SSID` / `WIFI_PASSWORD` in `config.h` |
-| ESP32 connects but no data in app | Wrong RTDB URL | Check `FIREBASE_DATABASE_URL` in `config.h` and `rtdbUrl` in `app_config.dart` |
-| Firebase auth failed on ESP32 | Service account not created | Complete Step 2 |
-| Bowl weight reads wrong grams | Calibration factor off | Redo Step 6a |
-| Water bowl always 0% or 100% | ADC range not calibrated | Redo Step 6b |
-| Reservoir always 0% or 100% | ADC range not calibrated | Redo Step 6c |
-| Pump runs with empty reservoir | Reservoir ADC not calibrated | Redo Step 6c |
-| Hopper always shows EMPTY | LDR threshold wrong | Redo Step 6d |
-| Pet never detected | Distance threshold too low | Increase `PET_DETECTION_DISTANCE_CM` |
-| Build fails: "assets not found" | Asset folders missing | Complete Step 3e |
-| Build fails: "gradlew not found" | Gradle wrapper missing | Complete Step 3f |
-| Cloud Functions deploy fails | Not on Blaze billing plan | Upgrade Firebase project to Blaze |
-| Schedules not picked up by ESP32 | `syncSchedulesToRTDB` not deployed | Confirm Step 5 succeeded (4 functions) |
+| ESP32 connects but no data in app | Wrong RTDB URL | Check `FIREBASE_DATABASE_URL` in `config.h` |
+| Schedule / Insights shows loading forever | Firestore index missing | Make sure Step 5 (deploy) succeeded |
+| Bowl weight reads wrong | Calibration factor off | Redo Step 6a |
+| Water always 0% or 100% | ADC not calibrated | Redo Step 6b |
+| Physical button not responding | Wrong GPIO or not grounded | Check wiring — GPIO 25 to GND via button |
+| Build fails: disk full | Gradle cache too large | Delete `~/.gradle/caches/build-cache-1` |
+| Cloud Functions deploy fails | Not on Blaze plan | Upgrade Firebase project to Blaze |
