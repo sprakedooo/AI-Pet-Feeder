@@ -50,7 +50,10 @@
       "Bash(python generate_icon.py)",
       "Bash(flutter pub *)",
       "Bash(dart run *)",
-      "PowerShell(cd \"C:\\\\Users\\\\jubil\\\\AI PET FEEDER\\\\firmware\"; $env:PATH += \";$env:USERPROFILE\\\\.platformio\\\\penv\\\\Scripts\"; pio run 2>&1 | Select-Object -Last 15)"
+      "PowerShell(cd \"C:\\\\Users\\\\jubil\\\\AI PET FEEDER\\\\firmware\"; $env:PATH += \";$env:USERPROFILE\\\\.platformio\\\\penv\\\\Scripts\"; pio run 2>&1 | Select-Object -Last 15)",
+      "Bash(git push *)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'Allow git push in Claude Code permissions *)"
     ]
   }
 }
